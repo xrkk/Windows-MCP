@@ -294,7 +294,11 @@ def register(
             clear=clear,
             press_enter=press_enter,
         )
-        return f"Typed {text} at ({x},{y})."
+        return (
+            f"Typed {len(text)} characters at ({x},{y}); "
+            f"clear={clear}, press_enter={press_enter}. "
+            "Input action completed; application acceptance or saving was not verified."
+        )
 
     @mcp.tool(
         name="Scroll",

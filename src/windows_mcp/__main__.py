@@ -71,8 +71,13 @@ _control_config = ControlConfig()
 _control_notifier: Any | None = None
 
 instructions = dedent("""
-Windows MCP server provides tools to interact directly with the Windows desktop,
-thus enabling to operate the desktop on the user's behalf.
+Use Windows MCP for interactive desktop actions and local administration.
+Inspect UI state when resolving an unknown target or element label; non-UI
+PowerShell, FileSystem, Process, Registry and Clipboard operations need no
+Snapshot prerequisite. Images require an explicit Screenshot or use_vision=True.
+Use WaitFor for a known condition and batch tools for known stable targets.
+Scrape is disabled. Use the Velo host coordinators for cross-host transfers and
+Flow collection results; FakeNet alone owns experimental network lifecycle.
 """)
 
 

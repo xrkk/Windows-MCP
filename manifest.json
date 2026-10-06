@@ -101,7 +101,7 @@
     },
     {
       "name": "Snapshot",
-      "description": "Captures complete desktop state including: system language, focused/opened windows, interactive elements (buttons, text fields, links, menus with coordinates), and scrollable areas. Use this when you need interactive element ids, scrollable regions, or browser DOM extraction with use_dom=True. Set use_vision=True to include screenshot. Set display=[0] or display=[0,1] using zero-based active Windows display indices; omit it to keep the default full-desktop behavior."
+      "description": "Inspect full current desktop/UI state, element labels, word coordinates and scrollable regions. Images only with use_vision=True; use_annotation adds UI overlays. use_ui_tree=False skips the tree; use_dom=True requires the tree and reads browser content. display selects zero-based monitors. region=[left,top,right,bottom] uses virtual-desktop pixels, overrides display, and rejects invalid bounds. Prefer a known reliable region; omit for full desktop. width_reference_line and height_reference_line add an image grid. Inspect before using unknown UI targets/labels; non-UI operations need no Snapshot."
     },
     {
       "name": "DisplayInventory",
@@ -117,7 +117,7 @@
     },
     {
       "name": "Scroll",
-      "description": "Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount (1 wheel \u2248 3-5 lines). Use for navigating long content, lists, and web pages."
+      "description": "Scrolls at coordinates [x, y], a UI element's label/id, or current mouse position if loc=None. Type: vertical (default) or horizontal. Direction: up/down for vertical, left/right for horizontal. wheel_times controls amount (1 wheel ≈ 3-5 lines). Use for navigating long content, lists, and web pages."
     },
     {
       "name": "Move",
@@ -134,10 +134,6 @@
     {
       "name": "WaitFor",
       "description": "Waits until a UI condition is met by polling the accessibility tree inside a single call, avoiding repeated Snapshot calls. Conditions: text_exists, active_window, element_exists, element_enabled, focused_element. Provide text and/or window_name depending on the condition. Set use_dom=True to match browser DOM text."
-    },
-    {
-      "name": "Scrape",
-      "description": "Fetch content from a URL or the active browser tab. By default, performs a lightweight HTTP request to the URL. If you need to extract text from the active tab's DOM within the viewport, ensure the page is open in a browser and use Snapshot with use_dom=True first, then the agent will handle extraction. Use Screenshot for the default fast visual inspection path."
     },
     {
       "name": "MultiSelect",

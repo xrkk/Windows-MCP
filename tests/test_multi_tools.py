@@ -90,6 +90,9 @@ def test_multiedit_uses_bulk_coordinate_resolution():
     tools = register_tools(desktop)
     result = asyncio.run(tools["MultiEdit"](labels=[[0, "First"], [1, "Second"]]))
 
-    assert result == "Multi-edited elements at: (10,10) with text 'First', (40,40) with text 'Second'"
+    assert "(10,10): 5 characters" in result
+    assert "(40,40): 6 characters" in result
+    assert "First" not in result and "Second" not in result
+    assert "not verified" in result
     desktop.get_coordinates_from_labels.assert_called_once_with([0, 1])
     desktop.multi_edit.assert_called_once_with([[10, 10, "First"], [40, 40, "Second"]])

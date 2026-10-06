@@ -616,7 +616,7 @@ windows-mcp auth --transport streamable-http --host 0.0.0.0 --port 8000 --with-t
 This command writes the auth key into the config file, can generate `cert.pem` and `key.pem`, and prints an example MCP client configuration for the selected transport.
 
 ### SSRF Protection
-`Scrape` tool blocks: private IPs, loopback, link-local, credentials-in-URLs, non-HTTP schemes.
+`Scrape` is not registered in this build; selecting it explicitly does not enable it. The retained HTTP safety helpers still validate private IPs, loopback, link-local, credentials-in-URLs and non-HTTP schemes for their consumers.
 
 ---
 
@@ -727,7 +727,7 @@ MCP Client can access the following tools to interact with Windows:
 - `App`: Launch an application by Start Menu name or strictly by executable path with separated argv and optional cwd; resize, move, and switch between windows.
 - `PowerShell`: To execute PowerShell commands.
 - `FileSystem`: Read, write, copy, move, delete, list, search, and inspect files and directories.
-- `Scrape`: To scrape the entire webpage for information.
+- `Scrape` is disabled and absent from the tool manifest. Browser UI inspection remains available through explicit `Snapshot(use_dom=True)`.
 - `MultiSelect`: Select multiple items (files, folders, checkboxes) with optional Ctrl key. Uses bulk label-to-coordinate resolution when labels are provided.
 - `MultiEdit`: Enter text into multiple input fields at specified coordinates. Uses bulk label-to-coordinate resolution when labels are provided.
 - `Clipboard`: Read or set Windows clipboard content.
@@ -831,3 +831,7 @@ Made with ❤️ by [CursorTouch](https://github.com/CursorTouch)
   url={https://github.com/CursorTouch/Windows-MCP}
 }
 ```
+
+### Input receipts and tool routing
+
+`Type` and `MultiEdit` report targets, character counts and completed input actions, without echoing submitted text. They do not claim that the application accepted or saved the input. Non-UI administration does not require a preliminary Snapshot; UI labels still require a current observed target. Images remain explicit. All other authorized tools remain registered by default.

@@ -86,11 +86,11 @@ def register(mcp, *, get_desktop, get_analytics):
             processed_labels = []
             for item in labels:
                 if len(item) != 2:
-                    raise ValueError(f"Each label item must be [label, text]. Invalid: {item}")
+                    raise ValueError("Each label item must be [label, text].")
                 try:
                     processed_labels.append((int(item[0]), item[1]))
                 except (ValueError, TypeError):
-                    raise ValueError(f"Invalid label id in item: {item}")
+                    raise ValueError("Invalid label id; expected an integer.")
 
             try:
                 label_ids = [item[0] for item in processed_labels]
@@ -101,5 +101,10 @@ def register(mcp, *, get_desktop, get_analytics):
                 raise ValueError(f"Failed to process labels: {e}")
 
         desktop.multi_edit(locs)
-        elements_str = ", ".join([f"({e[0]},{e[1]}) with text '{e[2]}'" for e in locs])
-        return f"Multi-edited elements at: {elements_str}"
+        elements_str = ", ".join(
+            f"({e[0]},{e[1]}): {len(e[2])} characters" for e in locs
+        )
+        return (
+            f"Multi-edited {len(locs)} fields: {elements_str}. "
+            "Input actions completed; application acceptance or saving was not verified."
+        )
