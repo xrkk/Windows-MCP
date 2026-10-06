@@ -219,6 +219,30 @@ def mouse_event(dwFlags: int, dx: int, dy: int, dwData: int, dwExtraInfo: int) -
     ctypes.windll.user32.mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)
 
 
+def AbsoluteMouseEvent(buttonFlag: int, x: int, y: int) -> None:
+    """
+    Emit a button mouse_event at the absolute screen point x, y.
+    buttonFlag: int, a button value in class `MouseEventFlag` (e.g. LeftDown).
+    x: int.
+    y: int.
+    Win32 only reads dx/dy when `MOUSEEVENTF_MOVE` is set, so a button event
+    sent with `MOUSEEVENTF_ABSOLUTE` alone is delivered wherever the cursor
+    already is and its coordinates are dead weight. `MOUSEEVENTF_VIRTUALDESK`
+    widens the normalized space from the primary monitor to the whole virtual
+    desktop, which is the space x and y are expressed in.
+    """
+    left, top, width, height = GetVirtualScreenRect()
+    nx = round((x - left) * 65535 / max(width - 1, 1))
+    ny = round((y - top) * 65535 / max(height - 1, 1))
+    mouse_event(
+        buttonFlag | MouseEventFlag.Move | MouseEventFlag.Absolute | MouseEventFlag.VirtualDesk,
+        nx,
+        ny,
+        0,
+        0,
+    )
+
+
 def keybd_event(bVk: int, bScan: int, dwFlags: int, dwExtraInfo: int) -> None:
     """keybd_event from Win32."""
     ctypes.windll.user32.keybd_event(bVk, bScan, dwFlags, dwExtraInfo)
@@ -261,22 +285,9 @@ def Click(x: int, y: int, waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     SetCursorPos(x, y)
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.LeftDown | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.LeftDown, x, y)
     time.sleep(0.05)
-    mouse_event(
-        MouseEventFlag.LeftUp | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.LeftUp, x, y)
     time.sleep(waitTime)
 
 
@@ -288,22 +299,9 @@ def MiddleClick(x: int, y: int, waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     SetCursorPos(x, y)
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.MiddleDown | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.MiddleDown, x, y)
     time.sleep(0.05)
-    mouse_event(
-        MouseEventFlag.MiddleUp | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.MiddleUp, x, y)
     time.sleep(waitTime)
 
 
@@ -315,22 +313,9 @@ def RightClick(x: int, y: int, waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     SetCursorPos(x, y)
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.RightDown | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.RightDown, x, y)
     time.sleep(0.05)
-    mouse_event(
-        MouseEventFlag.RightUp | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.RightUp, x, y)
     time.sleep(waitTime)
 
 
@@ -342,14 +327,7 @@ def PressMouse(x: int, y: int, waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     SetCursorPos(x, y)
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.LeftDown | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.LeftDown, x, y)
     time.sleep(waitTime)
 
 
@@ -359,14 +337,7 @@ def ReleaseMouse(waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     x, y = GetCursorPos()
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.LeftUp | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.LeftUp, x, y)
     time.sleep(waitTime)
 
 
@@ -378,14 +349,7 @@ def RightPressMouse(x: int, y: int, waitTime: float = OPERATION_WAIT_TIME) -> No
     waitTime: float.
     """
     SetCursorPos(x, y)
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.RightDown | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.RightDown, x, y)
     time.sleep(waitTime)
 
 
@@ -395,14 +359,7 @@ def RightReleaseMouse(waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     x, y = GetCursorPos()
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.RightUp | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.RightUp, x, y)
     time.sleep(waitTime)
 
 
@@ -414,14 +371,7 @@ def MiddlePressMouse(x: int, y: int, waitTime: float = OPERATION_WAIT_TIME) -> N
     waitTime: float.
     """
     SetCursorPos(x, y)
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.MiddleDown | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.MiddleDown, x, y)
     time.sleep(waitTime)
 
 
@@ -431,14 +381,7 @@ def MiddleReleaseMouse(waitTime: float = OPERATION_WAIT_TIME) -> None:
     waitTime: float.
     """
     x, y = GetCursorPos()
-    screenWidth, screenHeight = GetScreenSize()
-    mouse_event(
-        MouseEventFlag.MiddleUp | MouseEventFlag.Absolute,
-        x * 65535 // screenWidth,
-        y * 65535 // screenHeight,
-        0,
-        0,
-    )
+    AbsoluteMouseEvent(MouseEventFlag.MiddleUp, x, y)
     time.sleep(waitTime)
 
 
@@ -1452,6 +1395,22 @@ def SendUnicodeChar(char: str, charMode: bool = True) -> int:
     Return int, the number of events that it successfully inserted into the keyboard or mouse input stream.
                 If the function returns zero, the input was already blocked by another thread.
     """
+    if ord(char) > 0xFFFF:
+        # KEYBDINPUT.wScan is a 16-bit WORD, so a code point outside the BMP
+        # cannot ride in a single event — ord(char) would be truncated to its
+        # low 16 bits and type a private-use character instead. Windows
+        # recombines consecutive KEYEVENTF_UNICODE surrogate halves into the
+        # original character, so send one event pair per UTF-16 unit. There is
+        # no VkKeyScanW mapping for these, hence no charMode branch.
+        units = char.encode("utf-16-le")
+        ret = 0
+        for index in range(0, len(units), 2):
+            unit = int.from_bytes(units[index : index + 2], "little")
+            ret = SendInput(
+                KeyboardInput(0, unit, KeyboardEventFlag.KeyUnicode | KeyboardEventFlag.KeyDown),
+                KeyboardInput(0, unit, KeyboardEventFlag.KeyUnicode | KeyboardEventFlag.KeyUp),
+            )
+        return ret
     if charMode:
         vk = 0
         scan = ord(char)
@@ -1550,6 +1509,10 @@ def SendKeys(
     SendKeys('`~!@#$%^&*()-_=+{Enter}')
     SendKeys('[]{{}{}}\\|;:\'\",<.>/?{Enter}')
     """
+    # The parser loop below indexes text[0] unconditionally, so an empty
+    # string would raise IndexError. There are no keys to type: do nothing.
+    if not text:
+        return
     holdKeys = (
         "WIN",
         "LWIN",
@@ -2110,7 +2073,12 @@ def SetClipboardText(text: str) -> bool:
     with _ClipboardLock:
         if _OpenClipboard(0):
             ctypes.windll.user32.EmptyClipboard()
-            textByteLen = (len(text) + 1) * 2
+            # Size in UTF-16 units, not code points: a character outside the
+            # BMP occupies two units, so len(text) under-allocates and
+            # wcsncpy would stop short of the tail and skip the terminating
+            # NUL, leaving an unterminated CF_UNICODETEXT on the clipboard.
+            unitCount = len(text.encode("utf-16-le")) // 2
+            textByteLen = (unitCount + 1) * 2
             hClipboardData = ctypes.windll.kernel32.GlobalAlloc(0x2, textByteLen)  # GMEM_MOVEABLE
             hDestText = ctypes.windll.kernel32.GlobalLock(ctypes.c_void_p(hClipboardData))
             ctypes.cdll.msvcrt.wcsncpy(

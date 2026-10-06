@@ -18,6 +18,8 @@ import threading
 import time
 from ctypes import wintypes
 
+from windows_mcp.desktop.overlay_bitmap import premultiplied_bgra as _premultiplied_bgra
+
 logger = logging.getLogger(__name__)
 
 _FLASH_RGB = (0xFF, 0x45, 0x00)
@@ -31,6 +33,7 @@ _INTENSITY_QUANT = 32
 
 _lock = threading.Lock()
 _active_overlay: "_Overlay | None" = None
+_all_overlays: set["_Overlay"] = set()
 
 
 def _flash_disabled() -> bool:
@@ -45,16 +48,25 @@ class _Overlay:
         self.thread: threading.Thread | None = None
 
 
-def cancel_active_flash(timeout: float = 0.25) -> None:
-    """Tear down any flash overlay currently on screen."""
+def cancel_active_flash(timeout: float = 0.25) -> bool:
+    """Stop every pending flash and report whether all windows have closed.
+
+    A replaced flash can still be winding down while a newer one is active;
+    screenshot capture must wait for both rather than just the latest overlay.
+    """
     global _active_overlay
     with _lock:
-        ov = _active_overlay
+        overlays = set(_all_overlays)
+        if _active_overlay is not None:
+            overlays.add(_active_overlay)
         _active_overlay = None
-    if ov is None:
-        return
-    ov.stop_event.set()
-    ov.closed_event.wait(timeout=timeout)
+    for overlay in overlays:
+        overlay.stop_event.set()
+    deadline = time.monotonic() + timeout
+    return all(
+        overlay.closed_event.wait(timeout=max(0.0, deadline - time.monotonic()))
+        for overlay in overlays
+    )
 
 
 def show_capture_flash(capture_rect: "object | None" = None) -> None:
@@ -106,9 +118,18 @@ def show_capture_flash(capture_rect: "object | None" = None) -> None:
         global _active_overlay
         prev = _active_overlay
         _active_overlay = overlay
+        _all_overlays.add(overlay)
     if prev is not None:
         prev.stop_event.set()
-    overlay.thread.start()
+    try:
+        overlay.thread.start()
+    except BaseException:
+        with _lock:
+            _all_overlays.discard(overlay)
+            if _active_overlay is overlay:
+                _active_overlay = None
+        overlay.closed_event.set()
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +231,26 @@ class _WNDCLASSEX(ctypes.Structure):
 
 
 _user32.CreateWindowExW.restype = wintypes.HWND
+_user32.CreateWindowExW.argtypes = [
+    wintypes.DWORD,
+    wintypes.LPCWSTR,
+    wintypes.LPCWSTR,
+    wintypes.DWORD,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    wintypes.HWND,
+    wintypes.HMENU,
+    wintypes.HINSTANCE,
+    wintypes.LPVOID,
+]
 _user32.RegisterClassExW.restype = ctypes.c_ushort
+_user32.RegisterClassExW.argtypes = [ctypes.POINTER(_WNDCLASSEX)]
+_user32.UnregisterClassW.argtypes = [wintypes.LPCWSTR, wintypes.HINSTANCE]
+_user32.UnregisterClassW.restype = wintypes.BOOL
+_kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+_kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 _user32.DefWindowProcW.restype = _LRESULT
 _user32.DefWindowProcW.argtypes = [
     wintypes.HWND,
@@ -306,32 +346,6 @@ def _render_glow_rgba(
     return Image.alpha_composite(blurred, sharp)
 
 
-def _premultiplied_bgra(rgba_image, intensity: float) -> bytes:
-    """Convert PIL RGBA to BGRA premultiplied bytes scaled by ``intensity``."""
-    bgra = bytearray(rgba_image.tobytes("raw", "BGRA"))
-    if intensity >= 1.0:
-        for i in range(0, len(bgra), 4):
-            a = bgra[i + 3]
-            if a == 0:
-                continue
-            bgra[i] = (bgra[i] * a) // 255
-            bgra[i + 1] = (bgra[i + 1] * a) // 255
-            bgra[i + 2] = (bgra[i + 2] * a) // 255
-    else:
-        for i in range(0, len(bgra), 4):
-            a = (bgra[i + 3] * int(intensity * 255)) // 255
-            bgra[i + 3] = a
-            if a == 0:
-                bgra[i] = 0
-                bgra[i + 1] = 0
-                bgra[i + 2] = 0
-                continue
-            bgra[i] = (bgra[i] * a) // 255
-            bgra[i + 1] = (bgra[i + 1] * a) // 255
-            bgra[i + 2] = (bgra[i + 2] * a) // 255
-    return bytes(bgra)
-
-
 # ---------------------------------------------------------------------------
 # Window management
 # ---------------------------------------------------------------------------
@@ -388,7 +402,8 @@ def _create_layered_window(class_name: str, x: int, y: int, w: int, h: int):
     return hwnd, h_instance
 
 
-def _push_bitmap(hwnd, x: int, y: int, w: int, h: int, bgra: bytes) -> None:
+def _push_bitmap(hwnd, x: int, y: int, w: int, h: int, bgra: bytes, *, opacity: int = 255) -> None:
+    """Upload premultiplied pixels with optional whole-window opacity."""
     screen_dc = _user32.GetDC(None)
     if not screen_dc:
         raise OSError("GetDC failed")
@@ -423,7 +438,7 @@ def _push_bitmap(hwnd, x: int, y: int, w: int, h: int, bgra: bytes) -> None:
                     pos = _POINT(x, y)
                     size = _SIZE(w, h)
                     src_pos = _POINT(0, 0)
-                    blend = _BLENDFUNCTION(_AC_SRC_OVER, 0, 255, _AC_SRC_ALPHA)
+                    blend = _BLENDFUNCTION(_AC_SRC_OVER, 0, opacity, _AC_SRC_ALPHA)
                     ok = _user32.UpdateLayeredWindow(
                         hwnd,
                         screen_dc,
@@ -478,6 +493,11 @@ def _run_overlay(
         from PIL import Image  # noqa: F401  — fail fast if Pillow missing
     except Exception:
         logger.debug("Pillow unavailable; skipping screenshot flash")
+        with _lock:
+            global _active_overlay
+            if _active_overlay is overlay:
+                _active_overlay = None
+            _all_overlays.discard(overlay)
         overlay.closed_event.set()
         return
 
@@ -561,7 +581,7 @@ def _run_overlay(
         except Exception:
             pass
         with _lock:
-            global _active_overlay
             if _active_overlay is overlay:
                 _active_overlay = None
+            _all_overlays.discard(overlay)
         overlay.closed_event.set()

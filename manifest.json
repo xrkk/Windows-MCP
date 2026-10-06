@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.4",
   "name": "Windows-MCP",
-  "version": "0.8.5",
+  "version": "0.8.7",
   "description": "MCP Server that enables Claude to interact with Windows OS",
   "long_description": "Windows-MCP is an open-source project that enables seamless integration between AI agents and the Windows operating system. Acting as an MCP server, it bridges the gap between large language models (LLMs) and the Windows OS, allowing agents to perform tasks such as **file navigation, application control, UI interaction, QA testing, and more**.\n\n**KEY FEATURES**\n- **Seamless Windows Integration**: Interacts natively with Windows UI elements, opens applications, controls windows, simulates user input, and more.\n- **Use Any LLM (Vision Optional)**: Does not rely on traditional computer vision techniques or fine-tuned models. Works with any LLM, reducing complexity and setup time.\n- **Rich Toolset for UI Automation**: Includes tools for keyboard and mouse control, window management, and capturing window or UI state.\n- **Lightweight & Open-Source**: Minimal dependencies with full source code available under the MIT license.\n- **Customizable & Extendable**: Easily adapt or extend tools to suit custom automation workflows or AI integrations.\n- **Real-Time Interaction**: Typical latency between actions ranges from `0.2` to `0.9` seconds, depending on system load, active applications, and LLM inference speed.\n\n**MINIMUM REQUIREMENTS**\n- **Python 3.13+**\n",
   "author": {
@@ -80,6 +80,10 @@
   },
   "tools": [
     {
+      "name": "ControlStatus",
+      "description": "Reports whether AI or the user currently controls the desktop and the remaining user-idle wait before AI control can resume. This read-only status remains available during user takeover."
+    },
+    {
       "name": "App",
       "description": "Manages Windows applications with three modes: 'launch' (opens the prescibed application), 'resize' (adjusts the size/position of a named window or the active window if name is omitted), 'switch' (brings specific window into focus)."
     },
@@ -100,12 +104,16 @@
       "description": "Captures complete desktop state including: system language, focused/opened windows, interactive elements (buttons, text fields, links, menus with coordinates), and scrollable areas. Use this when you need interactive element ids, scrollable regions, or browser DOM extraction with use_dom=True. Set use_vision=True to include screenshot. Set display=[0] or display=[0,1] using zero-based active Windows display indices; omit it to keep the default full-desktop behavior."
     },
     {
+      "name": "DisplayInventory",
+      "description": "Reads the active display layout and DPI metadata. Reports each display's index, device name, monitor and work-area bounds, resolution, orientation, primary flag, effective DPI, and scale."
+    },
+    {
       "name": "Click",
       "description": "Performs mouse clicks at specified coordinates [x, y] or passing a UI element's label/id. Supports button types: 'left' for selection/activation, 'right' for context menus, 'middle'. Supports clicks: 0=hover only (no click), 1=single click (select/focus), 2=double click (open/activate). Provide either loc or label."
     },
     {
       "name": "Type",
-      "description": "Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' (beginning), 'end' (end), or 'idle' (default). Provide either loc or label."
+      "description": "Types text at specified coordinates [x, y] or passing a UI element's label/id. Set clear=True to clear existing text first, False to append. Set press_enter=True to submit after typing. Set caret_position to 'start' (beginning), 'end' (end), or 'idle' (default). Provide either loc or label. clear and press_enter accept only true or false. An empty text types nothing, so combine it with clear=True to just empty a field."
     },
     {
       "name": "Scroll",
@@ -122,6 +130,10 @@
     {
       "name": "Wait",
       "description": "Pauses execution for specified duration in seconds. Use when waiting for: applications to launch/load, UI animations to complete, page content to render, dialogs to appear, or between rapid actions. Helps ensure UI is ready before next interaction."
+    },
+    {
+      "name": "WaitFor",
+      "description": "Waits until a UI condition is met by polling the accessibility tree inside a single call, avoiding repeated Snapshot calls. Conditions: text_exists, active_window, element_exists, element_enabled, focused_element. Provide text and/or window_name depending on the condition. Set use_dom=True to match browser DOM text."
     },
     {
       "name": "Scrape",

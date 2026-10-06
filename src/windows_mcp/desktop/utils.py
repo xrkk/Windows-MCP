@@ -11,7 +11,37 @@ __all__ = [
     "remove_private_use_chars",
     "repair_surrogates",
     "is_elevated",
+    "as_bool",
 ]
+
+
+def as_bool(value: bool | str, name: str) -> bool:
+    """Parse a tool argument declared as ``boolean | string`` into a bool.
+
+    Claude Desktop strips anyOf schemas, so a caller may send "true" where the
+    schema says true. Only the two literals are accepted: anything else raises
+    rather than defaulting to false, so a typo or a plausible-looking "yes"
+    cannot silently turn a requested action into a no-op.
+
+    Args:
+        value: The raw argument value.
+        name: Parameter name, used in the error message.
+
+    Returns:
+        The parsed boolean.
+
+    Raises:
+        ValueError: If *value* is neither a bool nor "true"/"false".
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().casefold()
+        if normalized == "true":
+            return True
+        if normalized == "false":
+            return False
+    raise ValueError(f"{name} must be true or false")
 
 
 def is_elevated() -> bool:
