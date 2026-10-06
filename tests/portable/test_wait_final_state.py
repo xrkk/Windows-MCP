@@ -19,6 +19,7 @@ class WaitFinalState(unittest.TestCase):
         with patch.dict(sys.modules, {'windows_mcp.desktop.service': desktop_module,
                                      'fastmcp.utilities.types': image_module,
                                      'windows_mcp.desktop.utils': utils}):
+            self.delivery = receipts.load('wait_state_delivery', 'src/windows_mcp/tools/state_delivery.py')
             self.helpers = receipts.load('wait_snapshot_helpers', 'src/windows_mcp/tools/_snapshot_helpers.py')
 
     def state(self, text):
@@ -38,7 +39,7 @@ class WaitFinalState(unittest.TestCase):
 
     def test_returns_exact_final_observation_without_recapture(self):
         self.desktop.get_state.side_effect=[self.state('Loading'),self.state('Ready complete text')]
-        with patch.dict(sys.modules, {'windows_mcp.tools._snapshot_helpers': self.helpers}):
+        with patch.dict(sys.modules, {'windows_mcp.tools._snapshot_helpers': self.helpers, 'windows_mcp.tools.state_delivery': self.delivery}):
             out=self.registry.tools['WaitFor']('text_exists',text='Ready',interval=.001)
         self.assertEqual(self.desktop.get_state.call_count,2)
         self.assertIn('Ready complete text',out)
@@ -49,7 +50,7 @@ class WaitFinalState(unittest.TestCase):
 
     def test_timeout_carries_last_full_state(self):
         self.desktop.get_state.return_value=self.state('Still waiting, all text')
-        with patch.dict(sys.modules, {'windows_mcp.tools._snapshot_helpers': self.helpers}):
+        with patch.dict(sys.modules, {'windows_mcp.tools._snapshot_helpers': self.helpers, 'windows_mcp.tools.state_delivery': self.delivery}):
             with self.assertRaises(TimeoutError) as error:
                 self.registry.tools['WaitFor']('text_exists',text='absent',timeout=.001,interval=.001)
         self.assertIn('Still waiting, all text',str(error.exception))

@@ -97,8 +97,11 @@ def _http_middleware(
     allowed_hosts: list[str] | None = None,
 ) -> list:
     """Return ASGI middleware for HTTP transports."""
+    from windows_mcp.tools.state_delivery import StateDeliveryMiddleware
+
     middleware: list = [
         Middleware(OptionsMiddleware, allowed_origins=cors_origins or []),
+        Middleware(StateDeliveryMiddleware),
     ]
     if allowed_hosts:
         from starlette.middleware.trustedhost import TrustedHostMiddleware

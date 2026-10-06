@@ -139,6 +139,14 @@ def capture_desktop_state(
         "active_desktop": active_desktop,
         "all_desktops": all_desktops,
         "screenshot_bytes": screenshot_bytes,
+        "change_scope": (
+            use_dom, use_ui_tree,
+            tuple(region) if region is not None else None,
+            tuple(display_indices) if region is None and display_indices is not None else None,
+            desktop_state.active_desktop.get("id", desktop_state.active_desktop.get("name")),
+            ((desktop_state.active_window.handle, desktop_state.active_window.process_id)
+             if use_dom and desktop_state.active_window is not None else None),
+        ),
     }
 
 
@@ -247,6 +255,11 @@ def build_snapshot_response(
         if not getattr(desktop_state.tree_state, "status", True):
             response_text += "\nObservation incomplete: UI tree acquisition failed."
 
+    from windows_mcp.tools.state_delivery import describe_and_stage
+
+    response_text += "\n\n" + describe_and_stage(
+        desktop_state, capture_result.get("change_scope", ("unspecified",))
+    )
     response = [response_text]
     if screenshot_bytes:
         response.append(Image(data=screenshot_bytes, format="png"))
