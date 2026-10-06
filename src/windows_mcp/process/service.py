@@ -8,14 +8,21 @@ def list_processes(
     name: str | None = None,
     sort_by: Literal["memory", "cpu", "name"] = "memory",
     limit: int = 20,
+    pid: int | None = None,
 ) -> str:
     import psutil
     from tabulate import tabulate
 
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+        raise ValueError("limit must be a positive integer")
+    if pid is not None and (isinstance(pid, bool) or not isinstance(pid, int) or pid < 0):
+        raise ValueError("pid must be a non-negative integer")
     procs = []
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
         try:
             info = p.info
+            if pid is not None and info["pid"] != pid:
+                continue
             mem_mb = info["memory_info"].rss / (1024 * 1024) if info["memory_info"] else 0
             procs.append(
                 {
@@ -37,15 +44,20 @@ def list_processes(
         "name": lambda x: x["name"].lower(),
     }
     procs.sort(key=sort_key.get(sort_by, sort_key["memory"]), reverse=(sort_by != "name"))
+    total = len(procs)
     procs = procs[:limit]
     if not procs:
-        return f"No processes found{f' matching {name}' if name else ''}."
+        return f"No processes found (pid={pid}, name={name!r}; 0 observed matches)."
     table = tabulate(
         [[p["pid"], p["name"], f"{p['cpu']:.1f}%", f"{p['mem_mb']:.1f} MB"] for p in procs],
         headers=["PID", "Name", "CPU%", "Memory"],
         tablefmt="simple",
     )
-    return f"Processes ({len(procs)} shown):\n{table}"
+    return (
+        f"Processes ({len(procs)} shown of {total} observed matches; "
+        f"truncated={total > len(procs)}; pid={pid}; "
+        f"name_filter={'fuzzy' if name else 'none'}):\n{table}"
+    )
 
 
 def kill_process(

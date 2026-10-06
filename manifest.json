@@ -149,7 +149,7 @@
     },
     {
       "name": "Process",
-      "description": "Manages system processes. Use mode=\"list\" to list running processes with filtering and sorting options. Use mode=\"kill\" to terminate processes by PID or name."
+      "description": "List processes or terminate by PID/exact name. In list mode pid is exact; name is fuzzy, and both filters intersect. sort_by selects memory/cpu/name; limit is positive and the result reports observed match count and truncation. kill mode may require elevation."
     },
     {
       "name": "Notification",

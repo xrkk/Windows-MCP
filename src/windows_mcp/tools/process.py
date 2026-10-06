@@ -11,7 +11,7 @@ from windows_mcp import process
 def register(mcp, *, get_desktop, get_analytics):
     @mcp.tool(
         name="Process",
-        description='List and kill running processes. Keywords: task manager, running tasks, kill, terminate, stop process, PID, CPU, memory usage. Use mode="list" to list running processes with filtering and sorting options. Use mode="kill" to terminate processes by PID or name.',
+        description='List processes or terminate by PID/exact name. In list mode pid is exact; name is fuzzy, and both filters intersect. sort_by selects memory/cpu/name; limit is positive and the result reports observed match count and truncation. kill mode may require elevation.',
         annotations=ToolAnnotations(
             title="Process",
             readOnlyHint=False,
@@ -32,7 +32,7 @@ def register(mcp, *, get_desktop, get_analytics):
     ) -> str:
         try:
             if mode == "list":
-                return process.list_processes(name=name, sort_by=sort_by, limit=limit)
+                return process.list_processes(name=name, pid=pid, sort_by=sort_by, limit=limit)
             elif mode == "kill":
                 force = force is True or (isinstance(force, str) and force.lower() == "true")
                 return process.kill_process(name=name, pid=pid, force=force)
