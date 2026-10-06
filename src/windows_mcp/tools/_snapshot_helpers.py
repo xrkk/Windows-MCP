@@ -61,7 +61,9 @@ def capture_desktop_state(
     display: list[int] | None,
     region: list[int] | None,
     tool_name: str,
+    captured_state=None,
 ):
+    """Render a fresh capture or the exact final state already acquired by WaitFor."""
     profile_enabled = _snapshot_profile_enabled()
     profile_started_at = time.perf_counter()
     stage_started_at = profile_started_at
@@ -78,7 +80,7 @@ def capture_desktop_state(
     if width_reference_line and height_reference_line:
         grid_lines = (int(width_reference_line), int(height_reference_line))
 
-    desktop_state = desktop.get_state(
+    desktop_state = captured_state if captured_state is not None else desktop.get_state(
         use_vision=use_vision,
         use_dom=use_dom,
         use_annotation=use_annotation,
@@ -228,10 +230,22 @@ def build_snapshot_response(
     {windows}
     ''')
     if include_ui_details:
+        if not getattr(desktop_state.tree_state, "semantic_tree_root", None):
+            semantic_tree = f"{interactive_elements}\n{scrollable_elements}"
         response_text += dedent(f'''
 
     UI Tree:
     {semantic_tree or "No elements found."}''')
+        dom_text = "\n".join(
+            repair_surrogates(remove_private_use_chars(node.text))
+            for node in getattr(desktop_state.tree_state, "dom_informative_nodes", [])
+        )
+        if dom_text:
+            response_text += f"\n\nBrowser text:\n{dom_text}"
+        if getattr(desktop_state.tree_state, "truncated", False):
+            response_text += "\nObservation incomplete: some UI elements were not visited."
+        if not getattr(desktop_state.tree_state, "status", True):
+            response_text += "\nObservation incomplete: UI tree acquisition failed."
 
     response = [response_text]
     if screenshot_bytes:

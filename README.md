@@ -837,3 +837,5 @@ Made with ❤️ by [CursorTouch](https://github.com/CursorTouch)
 `Type` and `MultiEdit` report targets, character counts and completed input actions, without echoing submitted text. They do not claim that the application accepted or saved the input. Non-UI administration does not require a preliminary Snapshot; UI labels still require a current observed target. Images remain explicit. All other authorized tools remain registered by default.
 
 `Process(mode="list", pid=...)` applies an exact PID filter, intersected with the optional fuzzy name filter. Listings report observed matches and truncation; this is not a claim of access to every process.
+
+`WaitFor` returns the final complete observed state in the same result, without a second capture or automatic image. A timeout remains an error and includes its final observation. Browser text and incomplete-tree notices remain visible. State comparison is a separate capability; intermediate polling states are not delivered baselines.

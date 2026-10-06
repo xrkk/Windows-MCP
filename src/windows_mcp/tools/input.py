@@ -445,7 +445,8 @@ def register(
             "Waits until a UI condition is satisfied, polling the Windows accessibility tree "
             "inside the tool to avoid repeated Snapshot calls. Conditions: text_exists, "
             "active_window, element_exists, element_enabled, focused_element. Provide text "
-            "and/or window_name depending on the condition. Set use_dom=True for browser DOM text."
+            "and/or window_name depending on the condition. Set use_dom=True for browser DOM text. "
+            "Returns the complete final observed state without an extra capture or image, including on timeout."
         ),
         annotations=ToolAnnotations(
             title="WaitFor",
@@ -493,16 +494,28 @@ def register(
                 text=text,
                 window_name=window_name,
             )
-            if matched:
-                elapsed = time.monotonic() - started_at
-                return (
-                    f"WaitFor condition '{normalized}' satisfied after "
-                    f"{elapsed:.2f}s and {attempts} attempt(s): {last_detail}."
-                )
-
             remaining = deadline - time.monotonic()
-            if remaining <= 0:
+            if matched or remaining <= 0:
+                from windows_mcp.tools._snapshot_helpers import (
+                    capture_desktop_state, build_snapshot_response,
+                )
+                capture = capture_desktop_state(
+                    desktop, use_vision=False, use_dom=use_dom_bool,
+                    use_annotation=False, use_ui_tree=True,
+                    width_reference_line=None, height_reference_line=None,
+                    display=None, region=None, tool_name="WaitFor",
+                    captured_state=desktop_state,
+                )
+                final_state = build_snapshot_response(capture, include_ui_details=True)[0]
+                elapsed = time.monotonic() - started_at
+                if matched:
+                    return (
+                        f"WaitFor condition '{normalized}' satisfied after "
+                        f"{elapsed:.2f}s and {attempts} attempt(s): {last_detail}.\n"
+                        f"{final_state}"
+                    )
                 raise TimeoutError(
-                    f"Timed out after {timeout:.2f}s waiting for '{normalized}': {last_detail}."
+                    f"Timed out after {timeout:.2f}s waiting for '{normalized}': "
+                    f"{last_detail}.\nFinal observed state:\n{final_state}"
                 )
             time.sleep(min(interval, remaining))

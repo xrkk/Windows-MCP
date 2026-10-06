@@ -133,7 +133,7 @@
     },
     {
       "name": "WaitFor",
-      "description": "Waits until a UI condition is met by polling the accessibility tree inside a single call, avoiding repeated Snapshot calls. Conditions: text_exists, active_window, element_exists, element_enabled, focused_element. Provide text and/or window_name depending on the condition. Set use_dom=True to match browser DOM text."
+      "description": "Waits until a UI condition is satisfied, polling the Windows accessibility tree inside the tool to avoid repeated Snapshot calls. Conditions: text_exists, active_window, element_exists, element_enabled, focused_element. Provide text and/or window_name depending on the condition. Set use_dom=True for browser DOM text. Returns the complete final observed state without an extra capture or image, including on timeout."
     },
     {
       "name": "MultiSelect",
