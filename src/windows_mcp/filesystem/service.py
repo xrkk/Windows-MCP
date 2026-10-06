@@ -32,7 +32,7 @@ def read_file(path: str, offset: int | None = None, limit: int | None = None, en
     if not file_path.is_file():
         return f'Error: Path is not a file: {file_path}'
     if file_path.stat().st_size > MAX_READ_SIZE:
-        return f'Error: File too large ({file_path.stat().st_size:,} bytes). Maximum is {MAX_READ_SIZE:,} bytes. Use offset/limit parameters or the Shell tool for large files.'
+        return f'Error: File too large ({file_path.stat().st_size:,} bytes). Maximum is {MAX_READ_SIZE:,} bytes, including ranged reads. Use PowerShell with an explicit bounded read for larger files; offset/limit do not bypass this size protection.'
 
     try:
         with open(file_path, 'r', encoding=encoding, errors='replace') as f:
