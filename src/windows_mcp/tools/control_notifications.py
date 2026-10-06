@@ -260,6 +260,8 @@ class ControlToolGate(Middleware):
                 if isinstance(exc, InputUnavailable):
                     status = self.controller.status()
                     status["executed_steps"] = get_step_count()
+                    if hasattr(exc, "batch_progress"):
+                        status["batch_progress"] = exc.batch_progress
                     code = (
                         "CONTROL_UNAVAILABLE"
                         if status["state"] == "unavailable"

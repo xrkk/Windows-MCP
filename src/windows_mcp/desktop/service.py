@@ -1006,7 +1006,9 @@ class Desktop:
         press_ctrl = press_ctrl is True or (
             isinstance(press_ctrl, str) and press_ctrl.lower() == "true"
         )
-        try:
+        from windows_mcp.desktop.batch import run_batch
+
+        def setup():
             if press_ctrl:
                 owner.input_ledger.press(
                     "key:ctrl",
@@ -1014,21 +1016,26 @@ class Desktop:
                     lambda: uia.ReleaseKey(uia.Keys.VK_CONTROL, waitTime=0.05),
                     lambda: owner.physical_key_down(uia.Keys.VK_CONTROL),
                 )
-            for loc in locs:
-                owner.checkpoint_current()
-                x, y = loc
-                uia.Click(x, y, waitTime=0.2)
-                owner.record_step_current()
-                sleep(0.5)
-        finally:
-            if press_ctrl:
-                owner.input_ledger.release("key:ctrl")
+
+        def action(loc):
+            x, y = loc
+            uia.Click(x, y, waitTime=0.2)
+            owner.record_step_current()
+            sleep(0.5)
+
+        run_batch(
+            locs, checkpoint=owner.checkpoint_current, action=action, setup=setup,
+            cleanup=(lambda: owner.input_ledger.release("key:ctrl")) if press_ctrl else None,
+        )
 
     def multi_edit(self, locs: list[tuple[int, int, str]]):
-        for loc in locs:
-            get_controller().checkpoint_current()
+        from windows_mcp.desktop.batch import run_batch
+
+        def action(loc):
             x, y, text = loc
             self.type((x, y), text=text, clear=True)
+
+        run_batch(locs, checkpoint=get_controller().checkpoint_current, action=action)
 
     def scrape(self, url: str) -> str:
         current_url = url
