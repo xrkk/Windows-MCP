@@ -705,6 +705,15 @@ Remote (with auth + IP allowlist + TLS):
 
 ---
 
+## Completed artifact handoff to Velo
+
+After selected FileSystem/application writers have closed, use the explicit
+[`Export-VeloArtifacts.ps1` handoff](docs/artifact-handoff.md) with absolute
+paths and producer completion evidence. Export creates verified independent
+copies under a dedicated Velo read root; submit that completed directory to
+the Velo pull coordinator and verify its COMPLETE result. Ordinary writes,
+moves and copies alone do not prove cross-account readability or job completion.
+
 ## 🔨MCP Tools
 
 MCP Client can access the following tools to interact with Windows:
