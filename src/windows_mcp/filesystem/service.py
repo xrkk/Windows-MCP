@@ -6,6 +6,7 @@ Provides structured, safe file operations as an alternative to raw Shell command
 from datetime import datetime
 from pathlib import Path
 import fnmatch
+import json
 import logging
 import shutil
 import os
@@ -21,6 +22,21 @@ from windows_mcp.filesystem.views import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def _io_failure(operation: str, exc: OSError, source: Path, destination: Path | None = None) -> str:
+    """Retain identifiers and native errors locally, never file contents."""
+    native = json.dumps({
+        'exception_type': type(exc).__name__, 'errno': exc.errno,
+        'winerror': getattr(exc, 'winerror', None), 'os_error': str(exc)[:4096],
+    }, ensure_ascii=False)
+    detail = f'operation={operation}; source={source}; destination={destination}; native={native}'
+    logger.error('Filesystem failure: %s', detail)
+    prefix = 'Error: Permission denied.' if isinstance(exc, PermissionError) else 'Error: Filesystem operation failed.'
+    message = f'{prefix} {detail}'
+    if isinstance(exc, PermissionError) and not is_elevated():
+        message += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
+    return message
 
 
 def read_file(path: str, offset: int | None = None, limit: int | None = None, encoding: str = 'utf-8') -> str:
@@ -50,11 +66,8 @@ def read_file(path: str, offset: int | None = None, limit: int | None = None, en
                 return f'File: {file_path}\n{content}'
     except UnicodeDecodeError:
         return f'Error: Unable to read file as text with encoding "{encoding}". File may be binary.'
-    except PermissionError:
-        msg = f'Error: Permission denied: {file_path}'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('read', exc, file_path)
     except Exception as e:
         return f'Error reading file: {e}'
 
@@ -74,11 +87,8 @@ def write_file(path: str, content: str, append: bool = False, encoding: str = 'u
         action = 'Appended to' if append else 'Written to'
         size = file_path.stat().st_size
         return f'{action} {file_path} ({size:,} bytes)'
-    except PermissionError:
-        msg = f'Error: Permission denied: {file_path}'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('write', exc, file_path)
     except Exception as e:
         return f'Error writing file: {e}'
 
@@ -106,11 +116,8 @@ def copy_path(source: str, destination: str, overwrite: bool = False) -> str:
             return f'Copied directory: {src} -> {dst}'
         else:
             return f'Error: Unsupported file type: {src}'
-    except PermissionError:
-        msg = 'Error: Permission denied.'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('copy', exc, src, dst)
     except Exception as e:
         return f'Error copying: {e}'
 
@@ -135,11 +142,8 @@ def move_path(source: str, destination: str, overwrite: bool = False) -> str:
                 dst.unlink()
         shutil.move(str(src), str(dst))
         return f'Moved: {src} -> {dst}'
-    except PermissionError:
-        msg = 'Error: Permission denied.'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('move', exc, src, dst)
     except Exception as e:
         return f'Error moving: {e}'
 
@@ -166,11 +170,8 @@ def delete_path(path: str, recursive: bool = False) -> str:
             return f'Deleted directory: {target}'
         else:
             return f'Error: Unsupported file type: {target}'
-    except PermissionError:
-        msg = f'Error: Permission denied: {target}'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('delete', exc, target)
     except Exception as e:
         return f'Error deleting: {e}'
 
@@ -221,11 +222,8 @@ def list_directory(path: str, pattern: str | None = None, recursive: bool = Fals
         if pattern:
             header += f' (filter: {pattern})'
         return f'{header}\n' + '\n'.join(entries)
-    except PermissionError:
-        msg = f'Error: Permission denied: {dir_path}'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('list', exc, dir_path)
     except Exception as e:
         return f'Error listing directory: {e}'
 
@@ -267,11 +265,8 @@ def search_files(path: str, pattern: str, recursive: bool = True) -> str:
             return f'No matches found for "{pattern}" in {search_root}'
 
         return f'Search: "{pattern}" in {search_root} ({min(count, MAX_RESULTS)} matches)\n' + '\n'.join(results)
-    except PermissionError:
-        msg = f'Error: Permission denied: {search_root}'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('search', exc, search_root)
     except Exception as e:
         return f'Error searching: {e}'
 
@@ -312,10 +307,7 @@ def get_file_info(path: str) -> str:
             file.link_target = str(os.readlink(target))
 
         return file.to_string()
-    except PermissionError:
-        msg = f'Error: Permission denied: {target}'
-        if not is_elevated():
-            msg += "\n\nHINT: This operation may require an elevated (Administrator) terminal."
-        return msg
+    except OSError as exc:
+        return _io_failure('info', exc, target)
     except Exception as e:
         return f'Error getting file info: {e}'
